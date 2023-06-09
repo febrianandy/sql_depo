@@ -38,8 +38,8 @@ SUM(IFNULL(tonase_op_non_colourant,0) + IFNULL(tonase_op_colourant,0)) AS tonase
 SUM(IFNULL(os_tonase_sj_non_colourant,0) + IFNULL(os_tonase_sj_colourant,0)) AS tonase_os_sj,
 IFNULL(tonase_scan_sj,0) AS tonase_scan_sj,
 IFNULL(fnc.tonase_faktur,0) AS tonase_faktur,
-SUM((IFNULL(tonase_scan_sj_non_colourant,0) + IFNULL(tonase_scan_sj_colourant,0) + (IFNULL(tonase_fakur_non_colourant,0) + IFNULL(tonase_faktur_colorount,0)))) AS total_tonase_faktur,
-ROUND(SUM((IFNULL(tonase_op_non_colourant,0) + IFNULL(tonase_op_colourant,0)) + (IFNULL(os_tonase_sj_non_colourant,0) + IFNULL(os_tonase_sj_colourant,0)))) AS total_tonase_os,
+SUM(IFNULL(scan_sj.tonase_scan_sj,0) + IFNULL(fnc.tonase_faktur,0)) AS total_tonase_faktur,
+IFNULL(SUM(IFNULL(os_op,0) + IFNULL(os_sj,0)),0) AS total_tonase_os,
 IFNULL(outstanding_op,0) AS outstanding_op,
 IFNULL(outstanding_sj,0) AS outstanding_sj,
 SUM((IFNULL(os_value_op_non_colourant,0) + IFNULL(os_value_op_colourant,0)) + (IFNULL(os_value_sj_non_colourant,0) + IFNULL(os_value_sj_colourant,0))) AS total_os_value,
@@ -95,7 +95,8 @@ LEFT JOIN (
 	SUM(CASE WHEN mic.`is_colourant` = 0 THEN vmi.item_weight * op_detail.`remaining_amount` ELSE 0 END) AS tonase_op_non_colourant,
 	SUM(CASE WHEN mic.`is_colourant` = 1 THEN ROUND((op_detail.`item_price` * op_detail.`remaining_amount`) - (op_detail.`item_price` * (op_detail.`disc_percent` / 100) * op_detail.`remaining_amount`)) ELSE 0 END) AS os_value_op_colourant,
 	SUM(CASE WHEN mic.`is_colourant` = 1 THEN vmi.item_weight * op_detail.`remaining_amount` ELSE 0 END) AS tonase_op_colourant,
-	SUM(CASE WHEN mic.`is_colourant` = 0 OR  mic.`is_colourant` = 1  THEN ROUND((op_detail.`item_price` * op_detail.`remaining_amount`) + (op_detail.`item_price` * (op_detail.`disc_percent` / 100) * op_detail.`remaining_amount`)) ELSE 0 END) AS outstanding_op
+	SUM(CASE WHEN mic.`is_colourant` = 0 OR  mic.`is_colourant` = 1  THEN ROUND((op_detail.`item_price` * op_detail.`remaining_amount`) + (op_detail.`item_price` * (op_detail.`disc_percent` / 100) * op_detail.`remaining_amount`)) ELSE 0 END) AS outstanding_op,
+	ROUND(SUM(CASE WHEN mic.`is_colourant` = 0 THEN vmi.item_weight * op_detail.`remaining_amount` ELSE 0 END)  + 	SUM(CASE WHEN mic.`is_colourant` = 1 THEN vmi.item_weight * op_detail.`remaining_amount` ELSE 0 END),0) AS os_op
 	FROM master_customers ms 
 	JOIN master_depo md ON ms.`depo_id` = md.depo_id
 	JOIN op ON ms.`cust_id` = op.`cust_id`
@@ -113,7 +114,8 @@ LEFT JOIN(
   SUM(CASE WHEN mic.`is_colourant` = 0 THEN vmi.`item_weight` * sjd.remaining_amount ELSE 0 END) AS os_tonase_sj_non_colourant,
   SUM(CASE WHEN mic.`is_colourant` = 1 THEN ROUND((od.`item_price` * sjd.`remaining_amount`) - (od.`item_price` * (od.`disc_percent` / 100) * sjd.`remaining_amount`)) ELSE 0 END) AS os_value_sj_colourant,
   SUM(CASE WHEN mic.`is_colourant` = 1 THEN vmi.`item_weight` * sjd.remaining_amount ELSE 0 END) AS os_tonase_sj_colourant,
-  SUM(CASE WHEN mic.`is_colourant` = 0 OR mic.`is_colourant` = 1 THEN ROUND((od.`item_price` * sjd.`remaining_amount`) + (od.`item_price` * (od.`disc_percent` / 100) * sjd.`remaining_amount`)) ELSE 0 END) AS outstanding_sj
+  SUM(CASE WHEN mic.`is_colourant` = 0 OR mic.`is_colourant` = 1 THEN ROUND((od.`item_price` * sjd.`remaining_amount`) + (od.`item_price` * (od.`disc_percent` / 100) * sjd.`remaining_amount`)) ELSE 0 END) AS outstanding_sj,
+  ROUND(SUM(CASE WHEN mic.`is_colourant` = 0 THEN vmi.`item_weight` * sjd.remaining_amount ELSE 0 END) + SUM(CASE WHEN mic.`is_colourant` = 1 THEN vmi.`item_weight` * sjd.remaining_amount ELSE 0 END),0) AS os_sj
 	FROM sj_customer_detail sjd
 	JOIN sj_customer sj USING(sjc_id)
 	JOIN op ON sj.op_id = op.`op_id`
@@ -124,7 +126,7 @@ LEFT JOIN(
 		AND sjd.remaining_amount > 0 
 		AND op.`working_date` >= 20230501 
 		AND op.`working_date` <= 20230531 
-	GROUP BY op.`cust_id`
+	GROUP BY op.`cust_id`,mic.`is_tools`
 )AS sj ON mc.`cust_id` = sj.cust_id
 LEFT JOIN(
 	SELECT 
@@ -239,6 +241,6 @@ LEFT JOIN(
 	WHERE rj.date_created >= 20230501 AND rj.date_created <= 20230531
 	GROUP BY rj.depo_id ,rj.cust_id
 )AS vkturk ON mc.`cust_id` = vktur.cust_id
-GROUP BY mc.cust_id,mc.`cust_code`,mc.`cust_name`
+GROUP BY mc.cust_id,mc.`cust_code`,mc.`cust_name`;
 
 
