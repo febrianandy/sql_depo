@@ -239,6 +239,6 @@ LEFT JOIN(
 	WHERE rj.date_created >= 20230501 AND rj.date_created <= 20230531
 	GROUP BY rj.depo_id ,rj.cust_id
 )AS vkturk ON mc.`cust_id` = vktur.cust_id
-GROUP BY mc.cust_id,mc.`cust_code`,mc.`cust_name`;
+GROUP BY mc.cust_id,mc.`cust_code`,mc.`cust_name`
 
 
