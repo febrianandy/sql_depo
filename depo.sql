@@ -45,7 +45,7 @@ LEFT JOIN (
 		mu.ug_name
 		FROM `history_employee_depo` hed
 		JOIN `master_usergroups` mu ON mu.`ug_id` = hed.ug_id 
-		WHERE mu.`ug_short_name` = "BM" AND started_date <= CURRENT_DATE AND (ended_date = 0 OR ended_date >= CURRENT_DATE)
+		WHERE mu.`ug_short_name` = "BM" AND started_date <= CURDATE() + 0 AND (ended_date = 0 OR ended_date >= CURDATE() + 0)
 		GROUP BY hed.emp_id
 	)AS hasil ON FIND_IN_SET(msa.depo_id, hasil.depo)
 	LEFT JOIN `master_employees` me ON hasil.emp_id = me.`emp_id`
@@ -64,7 +64,7 @@ LEFT JOIN(
 		mu.ug_name
 		FROM `history_employee_depo` hed
 		JOIN `master_usergroups` mu ON mu.`ug_id` = hed.ug_id 
-		WHERE mu.`ug_short_name` = "RGM" AND started_date <= CURRENT_DATE AND (ended_date = 0 OR ended_date >= CURRENT_DATE)
+		WHERE mu.`ug_short_name` = "RGM" AND started_date <= CURDATE() + 0 AND (ended_date = 0 OR ended_date >= CURDATE() + 0)
 		GROUP BY hed.emp_id
 	)AS hasil ON FIND_IN_SET(msa.depo_id, hasil.depo)
 	LEFT JOIN `master_employees` me ON hasil.emp_id = me.`emp_id`
