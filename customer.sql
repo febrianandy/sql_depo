@@ -44,7 +44,7 @@ IFNULL(outstanding_op,0) AS outstanding_op,
 IFNULL(outstanding_sj,0) AS outstanding_sj,
 SUM((IFNULL(os_value_op_non_colourant,0) + IFNULL(os_value_op_colourant,0)) + (IFNULL(os_value_sj_non_colourant,0) + IFNULL(os_value_sj_colourant,0))) AS total_os_value,
 IFNULL(value_scan_sj,0) AS value_scan_js,
-value_faktur,
+IFNULL(value_faktur,0) AS value_faktur,
 SUM(IFNULL(value_scan_sj,0) + IFNULL(value_faktur,0)) AS total_value_faktur
 FROM master_customers mc 
 LEFT JOIN master_depo md ON mc.`depo_id` = md.`depo_id`
@@ -146,7 +146,7 @@ LEFT JOIN(
 	SUM(CASE WHEN fj.`is_colourant` = 1 THEN fj.fj_total - IF(rj.cust_id = fj.cust_id AND rj.is_colourant = fj.is_colourant, rj.faktur_kurang, 0)  ELSE 0 END) AS faktur_colourant ,
 	SUM(CASE WHEN fj.`is_colourant` = 1 THEN fj.fj_tonase - IF(rj.cust_id = fj.cust_id AND rj.is_colourant = fj.is_colourant, rj.kurangin_tonase, 0) ELSE 0 END) AS tonase_faktur_colorount,
 	SUM(CASE WHEN fj.`is_colourant` = 1 THEN fj.fj_tonase - IF(rj.cust_id = fj.cust_id AND rj.is_colourant = fj.is_colourant, rj.kurangin_tonase, 0) ELSE 0 END) + SUM(CASE WHEN fj.`is_colourant` = 0 THEN fj.fj_tonase - IFNULL(rj.kurangin_tonase,0) ELSE 0 END) AS tonase_faktur,
-	SUM(fj.fj_total - IFNULL(rj.faktur_kurang,0)) AS value_faktur
+	SUM(IFNULL(fj.fj_total,0) - IFNULL(rj.faktur_kurang,0)) AS value_faktur
 	FROM master_customers mc
 	LEFT JOIN(
 		SELECT 
