@@ -42,7 +42,7 @@ SUM(IFNULL(scan_sj.tonase_scan_sj,0) + IFNULL(fnc.tonase_faktur,0)) AS total_ton
 IFNULL(SUM(IFNULL(os_op,0) + IFNULL(os_sj,0)),0) AS total_tonase_os,
 IFNULL(outstanding_op,0) AS outstanding_op,
 IFNULL(outstanding_sj,0) AS outstanding_sj,
-SUM((IFNULL(os_value_op_non_colourant,0) + IFNULL(os_value_op_colourant,0)) + (IFNULL(os_value_sj_non_colourant,0) + IFNULL(os_value_sj_colourant,0))) AS total_os_value,
+SUM(IFNULL(outstanding_op,0) + IFNULL(outstanding_sj,0)) AS total_os_value,
 IFNULL(value_scan_sj,0) AS value_scan_js,
 IFNULL(value_faktur,0) AS value_faktur,
 SUM(IFNULL(value_scan_sj,0) + IFNULL(value_faktur,0)) AS total_value_faktur
@@ -51,7 +51,7 @@ LEFT JOIN master_depo md ON mc.`depo_id` = md.`depo_id`
 LEFT JOIN view_master_customer_types vmct	 ON mc.cust_id = vmct.`cust_id`
 LEFT JOIN (
 	SELECT 
-	IFNULL(hed.emp_id,0) AS emp_id,
+	IFNULL(hed.emp_id,'') AS emp_id,
 	depo_id_list AS depo,
 	mu.ug_name,
 	me.emp_name AS bm
@@ -63,7 +63,7 @@ LEFT JOIN (
 )AS bm ON md.`depo_id` =  bm.depo
 LEFT JOIN(
 	SELECT 
-	IFNULL(hed.emp_id,0) AS emp_id,
+	IFNULL(hed.emp_id,'') AS emp_id,
 	depo_id_list AS depo,
 	mu.ug_name,
 	me.emp_name AS rgm
@@ -81,7 +81,7 @@ LEFT JOIN (
 	SUM(CASE WHEN mic.`is_colourant` = 0 THEN vmi.item_weight * op_detail.`remaining_amount` ELSE 0 END) AS tonase_op_non_colourant,
 	SUM(CASE WHEN mic.`is_colourant` = 1 THEN ROUND((op_detail.`item_price` * op_detail.`remaining_amount`) - (op_detail.`item_price` * (op_detail.`disc_percent` / 100) * op_detail.`remaining_amount`)) ELSE 0 END) AS os_value_op_colourant,
 	SUM(CASE WHEN mic.`is_colourant` = 1 THEN vmi.item_weight * op_detail.`remaining_amount` ELSE 0 END) AS tonase_op_colourant,
-	SUM(CASE WHEN mic.`is_colourant` = 0 OR  mic.`is_colourant` = 1  THEN ROUND((op_detail.`item_price` * op_detail.`remaining_amount`) + (op_detail.`item_price` * (op_detail.`disc_percent` / 100) * op_detail.`remaining_amount`)) ELSE 0 END) AS outstanding_op,
+	SUM(CASE WHEN mic.`is_colourant` = 0 THEN ROUND((op_detail.`item_price` * op_detail.`remaining_amount`) - (op_detail.`item_price` * (op_detail.`disc_percent` / 100) * op_detail.`remaining_amount`)) ELSE 0 END) + SUM(CASE WHEN mic.`is_colourant` = 1 THEN ROUND((op_detail.`item_price` * op_detail.`remaining_amount`) - (op_detail.`item_price` * (op_detail.`disc_percent` / 100) * op_detail.`remaining_amount`)) ELSE 0 END) AS outstanding_op,
 	ROUND(SUM(CASE WHEN mic.`is_colourant` = 0 THEN vmi.item_weight * op_detail.`remaining_amount` ELSE 0 END)  + 	SUM(CASE WHEN mic.`is_colourant` = 1 THEN vmi.item_weight * op_detail.`remaining_amount` ELSE 0 END),0) AS os_op
 	FROM master_customers ms 
 	JOIN master_depo md ON ms.`depo_id` = md.depo_id
@@ -100,7 +100,7 @@ LEFT JOIN(
   SUM(CASE WHEN mic.`is_colourant` = 0 THEN vmi.`item_weight` * sjd.remaining_amount ELSE 0 END) AS os_tonase_sj_non_colourant,
   SUM(CASE WHEN mic.`is_colourant` = 1 THEN ROUND((od.`item_price` * sjd.`remaining_amount`) - (od.`item_price` * (od.`disc_percent` / 100) * sjd.`remaining_amount`)) ELSE 0 END) AS os_value_sj_colourant,
   SUM(CASE WHEN mic.`is_colourant` = 1 THEN vmi.`item_weight` * sjd.remaining_amount ELSE 0 END) AS os_tonase_sj_colourant,
-  SUM(CASE WHEN mic.`is_colourant` = 0 OR mic.`is_colourant` = 1 THEN ROUND((od.`item_price` * sjd.`remaining_amount`) + (od.`item_price` * (od.`disc_percent` / 100) * sjd.`remaining_amount`)) ELSE 0 END) AS outstanding_sj,
+  SUM(CASE WHEN mic.`is_colourant` = 0 THEN ROUND((od.`item_price` * sjd.`remaining_amount`) - (od.`item_price` * (od.`disc_percent` / 100) * sjd.`remaining_amount`)) ELSE 0 END) + SUM(CASE WHEN mic.`is_colourant` = 1 THEN ROUND((od.`item_price` * sjd.`remaining_amount`) - (od.`item_price` * (od.`disc_percent` / 100) * sjd.`remaining_amount`)) ELSE 0 END) AS outstanding_sj,
   ROUND(SUM(CASE WHEN mic.`is_colourant` = 0 THEN vmi.`item_weight` * sjd.remaining_amount ELSE 0 END) + SUM(CASE WHEN mic.`is_colourant` = 1 THEN vmi.`item_weight` * sjd.remaining_amount ELSE 0 END),0) AS os_sj
 	FROM sj_customer_detail sjd
 	JOIN sj_customer sj USING(sjc_id)
@@ -109,9 +109,9 @@ LEFT JOIN(
 	JOIN view_master_items vmi ON vmi.item_id = od.`item_id`
 	JOIN `master_item_classifications` mic ON vmi.`icf_id` = mic.`icf_id`
 	WHERE sj.`is_sjc_finish` = 0 
-		AND sjd.remaining_amount > 0 
-		AND op.`working_date` >= 20230501 
-		AND op.`working_date` <= 20230531 
+	AND sjd.remaining_amount > 0 
+	AND op.`working_date` >= 20230501 
+	AND op.`working_date` <= 20230531 
 	GROUP BY op.`cust_id`,mic.`is_tools`
 )AS sj ON mc.`cust_id` = sj.cust_id
 LEFT JOIN(
@@ -123,18 +123,12 @@ LEFT JOIN(
   SUM(CASE WHEN mic.`is_colourant` = 1 THEN scjd.item_subtotal ELSE 0 END) AS value_scan_sj_colourant,
   SUM(CASE WHEN mic.`is_colourant` = 1 THEN scjd.amount * vmi.item_weight ELSE 0 END) AS tonase_scan_sj_colourant,
   SUM(CASE WHEN mic.`is_colourant` = 1 THEN scjd.amount * vmi.item_weight ELSE 0 END) +  SUM(CASE WHEN mic.`is_colourant` = 0 THEN scjd.amount * vmi.item_weight ELSE 0 END) AS tonase_scan_sj,
-	SUM(scjd.item_subtotal) AS value_scan_sj
+	SUM(CASE WHEN mic.`is_colourant` = 0 THEN scjd.item_subtotal ELSE 0 END) + SUM(CASE WHEN mic.`is_colourant` = 1 THEN scjd.item_subtotal ELSE 0 END)  AS value_scan_sj
 	FROM scan_sj_customer_detail scjd 
+	JOIN scan_sj_customer ssjc USING(ssjc_id)
 	JOIN `view_master_items` vmi ON scjd.item_id = vmi.`item_id`
 	JOIN `master_item_classifications` mic ON vmi.`icf_id` = mic.`icf_id` 
-	JOIN(
-		SELECT 
-		ssjc_id,
-		sjc.`cust_id`,
-		sjc.`depo_id`
-		FROM scan_sj_customer ssjc JOIN sj_customer sjc USING(sjc_id) 
-		WHERE ssjc.ssjc_state != 99 AND ssjc_state <= 2 AND ssjc.`working_date` >= 20230501 AND ssjc.`working_date` <= 20230531 
-	)AS ssjc USING(ssjc_id)
+	WHERE ssjc.ssjc_state != 99 AND ssjc_state <= 2 AND ssjc.`working_date` >= 20230501 AND ssjc.`working_date` <= 20230531
 	GROUP BY ssjc.cust_id
 )AS scan_sj ON mc.cust_id = scan_sj.cust_id
 LEFT JOIN(
@@ -146,7 +140,7 @@ LEFT JOIN(
 	SUM(CASE WHEN fj.`is_colourant` = 1 THEN fj.fj_total - IF(rj.cust_id = fj.cust_id AND rj.is_colourant = fj.is_colourant, rj.faktur_kurang, 0)  ELSE 0 END) AS faktur_colourant ,
 	SUM(CASE WHEN fj.`is_colourant` = 1 THEN fj.fj_tonase - IF(rj.cust_id = fj.cust_id AND rj.is_colourant = fj.is_colourant, rj.kurangin_tonase, 0) ELSE 0 END) AS tonase_faktur_colorount,
 	SUM(CASE WHEN fj.`is_colourant` = 1 THEN fj.fj_tonase - IF(rj.cust_id = fj.cust_id AND rj.is_colourant = fj.is_colourant, rj.kurangin_tonase, 0) ELSE 0 END) + SUM(CASE WHEN fj.`is_colourant` = 0 THEN fj.fj_tonase - IFNULL(rj.kurangin_tonase,0) ELSE 0 END) AS tonase_faktur,
-	SUM(IFNULL(fj.fj_total,0) - IFNULL(rj.faktur_kurang,0)) AS value_faktur
+	SUM(CASE WHEN fj.`is_colourant` = 0 THEN fj.fj_total - IFNULL(rj.faktur_kurang,0) ELSE 0 END) + SUM(CASE WHEN fj.`is_colourant` = 1 THEN fj.fj_total - IF(rj.cust_id = fj.cust_id AND rj.is_colourant = fj.is_colourant, rj.faktur_kurang, 0)  ELSE 0 END) AS value_faktur
 	FROM master_customers mc
 	LEFT JOIN(
 		SELECT 
@@ -178,7 +172,7 @@ LEFT JOIN(
 		JOIN `master_item_classifications` mic ON vmi.icf_id = mic.icf_id
 		WHERE rj.date_created >= 20230501 AND rj.date_created <= 20230531
 		GROUP BY rj.depo_id ,rj.cust_id,mic.`is_colourant`	
-	)AS rj ON mc.cust_id = rj.cust_id WHERE mc.`depo_id` = 64
+	)AS rj ON mc.cust_id = rj.cust_id
 	GROUP BY mc.cust_id 
 )AS fnc ON mc.`cust_id` = fnc.cust_id
 GROUP BY mc.cust_id,mc.`cust_code`,mc.`cust_name`;

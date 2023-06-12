@@ -43,7 +43,7 @@ LEFT JOIN (
 	LEFT JOIN `master_employees` me ON hed.emp_id = me.emp_id
 	WHERE mu.`ug_short_name` = "BM" AND started_date <= CURDATE() AND (ended_date = 0 OR ended_date >= CURDATE())
 	GROUP BY hed.emp_id
-)AS bm ON d.`depo_id` =  bm.depo
+)AS bm ON d.`depo_id` = bm.depo
 LEFT JOIN(
 	SELECT 
 	IFNULL(hed.emp_id,0) AS emp_id,
@@ -105,7 +105,7 @@ LEFT JOIN(
 		SUM(IF(ssjc.total_before_tpp = 0, ssjcd.item_subtotal, total_before_tpp)) AS total_before_tpp
 		FROM scan_sj_customer ssjc
 		LEFT JOIN scan_sj_customer_detail ssjcd ON ssjc.`ssjc_id` = ssjcd.ssjc_id AND ssjc.`total_before_tpp` = 0 
-		WHERE ssjc.`working_date` >= 20230501 AND ssjc.working_date <= 20230531 AND ssjc.ssjc_state != 99 AND ssjc_state < 2
+		WHERE ssjc.`working_date` >= 20230501 AND ssjc.working_date <= 20230531 AND ssjc.ssjc_state != 99 AND ssjc_state <= 2
 		GROUP BY ssjc.`depo_id`
 	)AS tpp ON ssjc.`depo_id` = tpp.depo_id
 	WHERE ssjc.ssjc_state != 99 AND ssjc_state <=2 AND ssjc.`working_date` >= 20230501 AND ssjc.`working_date` <= 20230531 
@@ -118,7 +118,7 @@ LEFT JOIN(
 	SUM(CASE WHEN fk.`is_tools` = 0 THEN fk.tonase_faktur - IFNULL(f_kurang.kurangin_faktur_tonase,0) ELSE 0 END) AS tonase_faktur,
 	SUM(CASE WHEN fk.`is_tools` = 1 THEN fk.value_faktur - IFNULL(f_kurang.value_faktur_kurangin, fk.tpp_het) ELSE 0 END) AS tools_value_faktur,
 	SUM(CASE WHEN fk.`is_tools` = 1 THEN fk.qty_tools_faktur - IFNULL(f_kurang.qty_tools_f_kurang,0) ELSE 0 END) AS qty_tools_faktur,
-	fk.value_fakur_sebelum_tpp
+	SUM(IFNULL(fk.value_fakur_sebelum_tpp,0) - IFNULL(value_faktur_kurangin,0)) AS value_fakur_sebelum_tpp
 	FROM master_depo md 
 	LEFT JOIN(
 		SELECT 
@@ -167,3 +167,4 @@ LEFT JOIN(
 	GROUP BY md.depo_id, md.depo_code, md.depo_name
 )AS v_faktur ON d.depo_id = v_faktur.depo_id
 GROUP BY d.depo_id, d.depo_code, d.depo_name;
+
