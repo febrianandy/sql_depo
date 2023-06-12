@@ -1,8 +1,8 @@
 SELECT 
 md.`depo_id`,
 md.`depo_name`,
-rgm.rgm,
-bm.bm,
+IFNULL(rgm.rgm,'') AS rgm,
+IFNULL(bm.bm,'') AS bm,
 mc.`cust_name`,
 vmct.cust_type_name,
 -- Select tonase non colorount:
@@ -51,7 +51,7 @@ LEFT JOIN master_depo md ON mc.`depo_id` = md.`depo_id`
 LEFT JOIN view_master_customer_types vmct	 ON mc.cust_id = vmct.`cust_id`
 LEFT JOIN (
 	SELECT 
-	IFNULL(hed.emp_id,'') AS emp_id,
+	hed.emp_id AS emp_id,
 	depo_id_list AS depo,
 	mu.ug_name,
 	me.emp_name AS bm
@@ -63,7 +63,7 @@ LEFT JOIN (
 )AS bm ON md.`depo_id` =  bm.depo
 LEFT JOIN(
 	SELECT 
-	IFNULL(hed.emp_id,'') AS emp_id,
+	hed.emp_id AS emp_id,
 	depo_id_list AS depo,
 	mu.ug_name,
 	me.emp_name AS rgm
